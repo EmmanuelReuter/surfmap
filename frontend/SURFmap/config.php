@@ -43,7 +43,7 @@
      *      region - Indicates the region in which a NATed network relies. Leave this setting empty, if unknown..
      *      city - Indicates the city in which a NATed network relies. Leave this setting empty, if unknown..
      */
-    $config['internal_domains'] = array("192.168/16;172.16/12;10.0/8;" => array("country" => "YOUR_COUNTRY", "region" => "YOUR REGION", "city" => "YOUR CITY"));
+    $config['internal_domains'] = array("192.168/16;172.16/12;10.0/8;193.51.249/24" => array("country" => "Nouvelle-Caledonie", "region" => "Province Sud", "city" => "Noumea"));
     $config['hide_internal_domain_traffic'] = 1; // Indicates whether your internal domain traffic should be visualized in SURFmap - 0: no, 1: yes [default: 1]
     $config['ignore_marker_internal_traffic_in_line_color_classification'] = 1; // Indicates whether traffic 'inside' a marker (e.g., inside a country, region or city) should be ignored in the line color classification process - 0: no, 1: yes [default: 1]
 
