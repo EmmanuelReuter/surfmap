@@ -3,6 +3,9 @@
  * Author: Rick Hofstede <r.j.hofstede@utwente.nl>
  * University of Twente, The Netherlands
  *
+ * Contributor : Emmauel Reuter <emmanuel.reuter@ird.fr>
+ * French Institue for Reaseach and Developpement, New Caledonia
+ *
  * LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *******************************/
 
@@ -35,6 +38,9 @@ input[type=text], textarea {
 }
 
 label.zoom_level_label {
+    margin-left:        2px;
+}
+label.mask_private_ip {
     margin-left:        2px;
 }
 
@@ -249,7 +255,8 @@ table#help td.help_item {
 
 /* Menu panel (http://spyrestudios.com/how-to-create-a-sexy-vertical-sliding-panel-using-jquery-and-css3/) */
 .panel {
-    background:         #6E6E6E;
+    background:         #6E6E6E; // original one
+    background: #898181;
     border:             1px solid #111111;
     border-radius:      20px 0px 0px 20px;
     color:              #CCCCCC;
@@ -262,9 +269,7 @@ table#help td.help_item {
     right:              5px;
     width:              210px;
     filter:             alpha(opacity=90);
-    -moz-border-radius-topleft: 20px;
     -webkit-border-top-left-radius: 20px;
-    -moz-border-radius-bottomleft: 20px;
     -webkit-border-bottom-left-radius: 20px;
 }
 
@@ -281,11 +286,8 @@ div.panel_trigger {
     border:             1px solid #444444;
     border-radius:      20px 0px 0px 20px;
     display:            block;
-    -moz-border-radius-topleft: 20px;
     -webkit-border-top-left-radius: 20px;
-    -moz-border-radius-bottomleft: 20px;
     -webkit-border-bottom-left-radius: 20px;
-    -moz-border-radius-bottomright: 0px;
     -webkit-border-bottom-right-radius: 0px;
 }
 
@@ -304,11 +306,8 @@ div.panel_trigger:hover {
     border-radius:      20px 0px 0px 20px;
     display:            block;
     cursor:             pointer;
-    -moz-border-radius-topleft: 20px;
     -webkit-border-top-left-radius: 20px;
-    -moz-border-radius-bottomleft: 20px;
     -webkit-border-bottom-left-radius: 20px;
-    -moz-border-radius-bottomright: 0px;
     -webkit-border-bottom-right-radius: 0px;
 }
 
@@ -318,6 +317,7 @@ div.active.panel_trigger {
 
 .panel_section_title {
     color:#FF192A;
+	color:#1111b3;
 }
 
 .panel_section_content {
@@ -359,7 +359,7 @@ div#header span#logo {
 
 /* Map */
 div#map_canvas {
-    height:             95%;
+    height:             94%;
     width:              97%;
 }
 
@@ -368,6 +368,7 @@ div#footer {
     width:              97%;
     font-size:          8pt;
     clear:              both;
+	position: relative;
 }
 
 /* TimePicker (jQuery) */
@@ -401,3 +402,32 @@ div#footer {
 .ui-multiselect-checkboxes li { clear:both; font-size:0.9em; padding-right:3px }
 .ui-multiselect-checkboxes li.ui-multiselect-optgroup-label { text-align:center; font-weight:bold; border-bottom:1px solid }
 .ui-multiselect-checkboxes li.ui-multiselect-optgroup-label a { display:block; padding:3px; margin:1px 0; text-decoration:none }
+
+/* Style de base pour la fenêtre popup */
+.popup {
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 10px;
+    max-width: 550px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+}
+
+/* Style pour le contenu de la fenêtre popup */
+.popup-content {
+    color: #333;
+}
+
+/* Style pour le lien dans le contenu de la fenêtre popup */
+.popup-content a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+/* Style pour le lien survolé dans le contenu de la fenêtre popup */
+.popup-content a:hover {
+    text-decoration: underline;
+}
+
+
