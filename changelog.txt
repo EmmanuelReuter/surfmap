@@ -7,9 +7,9 @@ Release notes [v4.0.1 (20230821)]:
 - Migrating version for Google Map API to Openlayers API
 - Same functionnalities as V 3.1.1
 - Adding $config['mask_private_ip'] in config.php to hide private IPv4 addresses when displaying flows
-- All geolocation queries are made from database
+- All geolocation queries are done from local databases
 - [BUGFIX]  Fixed Curl with Redirection (CURLOPT_FOLLOWLOCATION)
-- In Menu section. Selecting Country, Host, City, Region does not change Map Zoom but wich layers are showned
+- In Menu section. Selecting Country, Host, City, Region does not change Map Zoom but wich layers are drawed
 - OpenLayer show be donwload at your webserver HTML Root Directory (in my case /var/www/html/OpenLayers). Next process, include under SURMap
 
 Release notes [v3.3.1 (20141030)]:
