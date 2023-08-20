@@ -1,6 +1,6 @@
 SURFmap -- A Network Monitoring Tool Based on the OpenLayer API (old with Google Maps API)
 
-Version:    3.3.1
+Version:    4.0.1
 Author:     Rick Hofstede, University of Twente <r.j.hofstede@utwente.nl>
 Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
 Franch Institue for Research and Development
@@ -17,6 +17,8 @@ as a plugin for NfSen. It adds a geographical dimension to network traffic by ge
 IP addresses of end hosts. For more details, the following resources are available:
     - [Website] http://surfmap.sf.net
     - [Mailing list] surfmap-discuss@lists.sourceforge.net
+
+That new version is based on SURFMap V 3.3.1, develop by Rick Hofstede wich used Google Maps API. The current version is based on OpenLayer API (v6.5 and newer, not tested).
 
 
 2) Installation instructions
