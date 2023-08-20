@@ -7,6 +7,9 @@
 # Copyright (C) 2013 INVEA-TECH a.s.
 # Author(s):    Rick Hofstede   <r.j.hofstede@utwente.nl>
 #               Pavel Celeda    <celeda@invea-tech.com>
+# Contributor :
+# Emmanuel Reuter, < emmanuel.reuter@ird.fr>
+# French Institute for Research and Developpement
 #
 # LICENSE TERMS - 3-clause BSD license
 #
@@ -14,7 +17,7 @@
 #
 #########################################################
 
-VERSION=3.3.1
+VERSION=4.0.1
 SURFMAP_REL=SURFmap_v${VERSION}.tar.gz
 TMP_DIR=SURFmap
 GEO_DB=GeoLiteCity.dat.gz
