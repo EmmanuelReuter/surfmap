@@ -3,13 +3,19 @@
  # getgeolocationdata.php
  # Author:      Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *****************************************************/
 
     require_once("../config.php");
     require_once("../util.php");
-    require_once("../lib/MaxMind/geoipcity.inc");
+
+if (!defined("MODULE_GEOIP")) {
+    include("../lib/MaxMind/geoipcity.inc");
+}
+
     require_once("../lib/IP2Location/ip2location.class.php");
     header("content-type: application/json");
 
@@ -37,6 +43,9 @@
         $country = "";
         $region = "";
         $city = "";
+        $continent = "";
+
+	if (strcmp($address, "0.0.0.0")==0) continue;
         
         foreach ($config['internal_domains'] as $key => $value) {
             $internal_domain_networks = explode(";", $key);
@@ -45,6 +54,9 @@
              * Check whether a NATed setup was used. If so, use the geolocation data provided
              * in the configuration file. Otherwise, use a geolocation service.
              */
+		//error_log( "NATed ".$key."  ".$value."\n");
+
+
             $internal_address = false;
             foreach ($internal_domain_networks as $subnet) {
                 if (ip_address_in_net($address, $subnet)) {
@@ -76,50 +88,36 @@
                 
                 // IP2Location does not feature continent information
             } else if ($config['geolocation_db'] == "MaxMind") {
+		try {
                 if (strpos($address, ":") === false) { // IPv4 address
                     $data = geoip_record_by_addr($db, $address);
+			$continent=  geoip_continent_by_addr($db,$address);
                 } else { // IPv6 address
                     $data = geoip_record_by_addr_v6($db, $address);
+			$continent=  geoip_continent_by_addr_v6($db,$address);
                 }
+		$region=$data->mostSpecificSubdivision->name;
+		$country=$data->country->name;
+		$city=$data->city->name ;
+		} catch (Exception $e) {
+			$country = "(UNKNOWN)";
+                	$region = "(UNKNOWN)";
+                	$city = "(UNKNOWN)";
+       error_log(" address ".$address.','.$continent.', '.$country.', '.$region.', '.$city); 
+		}
             
-                $country = (!isset($data->country_name) || $data->country_name === "-") ? "(UNKNOWN)" : strtoupper($data->country_name);
-                $region = (!isset($data->country_code)
-                        || !isset($data->region)
-                        || !array_key_exists($data->country_code, $GEOIP_REGION_NAME)
-                        || !array_key_exists($data->region, $GEOIP_REGION_NAME[$data->country_code])
-                        || $GEOIP_REGION_NAME[$data->country_code][$data->region] === "") ? "(UNKNOWN)" : strtoupper($GEOIP_REGION_NAME[$data->country_code][$data->region]);
-                $city = (!isset($data->city) || $data->city === "-") ? "(UNKNOWN)" : strtoupper($data->city);
-                $continent_code = (!isset($data->continent_code) || $data->continent_code === "-") ? "(UNKNOWN)" : strtoupper($data->continent_code);
             } else {
                 $country = "(UNKNOWN)";
                 $region = "(UNKNOWN)";
                 $city = "(UNKNOWN)";
+                $continent = "(UNKNOWN)";
             }
         }
         
         $country = fix_comma_separated_name(utf8_encode($country));
         $region = fix_comma_separated_name(utf8_encode($region));
         $city = fix_comma_separated_name(utf8_encode($city));
-        
-        if (isset($continent_code) && $continent_code !== "(UNKNOWN)") {
-            if ($continent_code === "Afrika") {
-                $continent = "Afrika";
-            } else if ($continent_code === "AS") {
-                $continent = "Asia";
-            } else if ($continent_code === "EU") {
-                $continent = "Europe";
-            } else if ($continent_code === "NA") {
-                $continent = "North-America";
-            } else if ($continent_code === "SA") {
-                $continent = "South-America";
-            } else if ($continent_code === "OC") {
-                $continent = "Ocenania";
-            }
-            
-            $continent = strtoupper($continent);
-        } else {
-            $continent = "(UNKNOWN)";
-        }
+        $continent = fix_comma_separated_name(utf8_encode($continent));
         
         array_push($result['geolocation_data'], array('address' => $address, 'continent' => $continent, 'country' => $country, 'region' => $region, 'city' => $city));
         unset($continent_code, $continent);
@@ -135,5 +133,10 @@
     $result['status'] = 0;
     echo json_encode($result);
     die();
+
+function isRequiredFileIncluded($filename) {
+    $included_files = get_included_files();
+    return in_array($filename, $included_files);
+}
 
 ?>

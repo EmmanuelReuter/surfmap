@@ -3,6 +3,8 @@
  # getversion.php
  # Author:      Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *****************************************************/
@@ -29,6 +31,7 @@
                 CURLOPT_URL => 'http://surfmap.sourceforge.net/get_version_number.php',
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_POST => true,
+		CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_POSTFIELDS => array(
                     'current_version' => urlencode($current_version),
                     'type' => urlencode($update_type),

@@ -3,6 +3,8 @@
  # setsessiondata.php
  # Author:      Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *****************************************************/
@@ -148,7 +150,7 @@
     if (isset($_POST['params']['nfsen_selected_sources'])) {
         // If no source has been selected, do nothing
         if (count($_POST['params']['nfsen_selected_sources']) == 0) {
-            break;
+            return; //break;
         }
         
         $_SESSION['SURFmap']['nfsen_selected_sources'] = array(); // Clear current list
