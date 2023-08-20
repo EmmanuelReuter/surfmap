@@ -3,6 +3,15 @@ SURFmap -- A Network Monitoring Tool Based on the Google Maps API
 Please check the manual or readme for installation instructions.
 ---
 
+Release notes [v4.0.1 (20230821)]:
+- Migrating version for Google Map API to Openlayers API
+- Same functionnalities as V 3.1.1
+- Adding $config['mask_private_ip'] in config.php to hide private IPv4 addresses when displaying flows
+- All geolocation queries are made from database
+- [BUGFIX]  Fixed Curl with Redirection (CURLOPT_FOLLOWLOCATION)
+- In Menu section. Selecting Country, Host, City, Region does not change Map Zoom but wich layers are showned
+- OpenLayer show be donwload at your webserver HTML Root Directory (in my case /var/www/html/v6...). Next process, include under SURMap
+
 Release notes [v3.3.1 (20141030)]:
 - [BUGFIX]  Fixed installation script for situations in which SURFmap was installed using a pre-fetched install.sh
 - [BUGFIX]  Fixed multiple installation script issues in situations where SURFmap was installed from a ‘SURFmap/SURFmap/‘ directory
