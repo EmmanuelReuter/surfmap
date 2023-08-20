@@ -23,7 +23,7 @@ echo "Removing previous Git clone"
 rm -rf SURFmap SURFmap_v*.tar.gz install.sh
 
 echo "Cloning Git repository"
-git clone https://github.com/rickhofstede/surfmap.git SURFmap
+git clone https://github.com/EmmanuelReuter/surfmap.git SURFmap
 
 if [ ! -f SURFmap/install.sh ]; then
     err "Something went wrong while cloning SURFmap!"
