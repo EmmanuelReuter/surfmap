@@ -8,7 +8,7 @@
      *******************************/
     
     /* [Application parameters] */
-    $config['map_center'] = "52.217,6.9"; // Center of the map, specified by latitude and longitude coordinates; coordinates should be separated by a comma (,) [default: '52.217,6.9']
+    $config['map_center'] = "-22.298125,166.439582"; // Center of the map, specified by latitude and longitude coordinates; coordinates should be separated by a comma (,) [default: '52.217,6.9']
     $config['default_flow_record_count'] = 50; // Default number of flow records to be selected [default: 50]
     $config['default_query_type'] = 1; // Default NfSen option - 0: Flow listing, 1: Stat TopN [default: 1]
     $config['default_query_type_stat_order'] = 2; // Indicates the field on which statistics should be based - 0: flows, 1: packets, 2: bytes [default: 2]
@@ -24,7 +24,8 @@
     
     /* [GeoLocation] */
     $config['geolocation_db'] = "MaxMind"; // "MaxMind" or "IP2Location" [default: 'MaxMind']
-    $config['maxmind_path'] = "lib/MaxMind/GeoLiteCity.dat"; // Will be ignored when $config['geolocation_db'] is not set to "MaxMind" [default: 'lib/MaxMind/GeoLiteCity.dat']
+    $config['maxmind_path'] = "../lib/MaxMind/GeoLite2-City.mmdb"; // Will be ignored when $config['geolocation_db'] is not set to "MaxMind" [default: 'lib/MaxMind/GeoLiteCity.dat']
+    $config['maxmind_path_country'] = "../lib/MaxMind/GeoLite2-Country.mmdb"; // Will be ignored when $config['geolocation_db'] is not set to "MaxMind" [default: 'lib/MaxMind/GeoLiteCity.dat']
     $config['maxmindv6_path'] = "lib/MaxMind/GeoLiteCityv6.dat"; // Will be ignored when $config['geolocation_db'] is not set to "MaxMind" [default: 'lib/MaxMind/GeoLiteCity.dat']
     $config['ip2location_path'] = "lib/IP2Location/IP-COUNTRY-REGION-CITY-LATITUDE-LONGITUDE.BIN"; // Will be ignored when $GEOLOCATION_DB is not set to "IP2Location" [default: 'lib/IP2Location/IP-COUNTRY-REGION-CITY-LATITUDE-LONGITUDE.BIN']
     
@@ -35,12 +36,12 @@
      * "<domains>" => array("country" => "<country>", "region" => "<region>", "city" => "<city>")
      * 
      * Explanation of the fields:
-     *      domains - NfSen filter subnet notation to indicate your internal domain (e.g. NATed) traffic. Multiple domains must be separated by a semicolon [example: '192.168/16;172.16/12;10.0/8']
+     *      domains - NfSen filter subnet notation to indicate your internal domain (e.g. NATed) traffic. Multiple domains must be separated by a semicolon [example: '192.168/16;172.16/16;10.0/8']
      *      country - Indicates the country in which a NATed network relies. If left empty, matching flow records will be ignored.
      *      region - Indicates the region in which a NATed network relies. Leave this setting empty, if unknown..
      *      city - Indicates the city in which a NATed network relies. Leave this setting empty, if unknown..
      */
-    $config['internal_domains'] = array("192.168/16;172.16/12;10.0/8" => array("country" => "THE NETHERLANDS", "region" => "OVERIJSSEL", "city" => "ENSCHEDE"));
+    $config['internal_domains'] = array("192.168/16;172.16/12;10.0/8;193.51.249/24" => array("country" => "Nouvelle-Caledonie", "region" => "Province Sud", "city" => "Noumea"));
     $config['hide_internal_domain_traffic'] = 1; // Indicates whether your internal domain traffic should be visualized in SURFmap - 0: no, 1: yes [default: 1]
     $config['ignore_marker_internal_traffic_in_line_color_classification'] = 1; // Indicates whether traffic 'inside' a marker (e.g., inside a country, region or city) should be ignored in the line color classification process - 0: no, 1: yes [default: 1]
 
@@ -56,5 +57,8 @@
     $config['proxy_user_authentication'] = 0; // Enable this setting if your proxy requires authentication (username and password) [default: 0]
     $config['proxy_username'] = "username"; // Username to be used for proxy authentication
     $config['proxy_password'] = "password"; // Password to be used for proxy authentication
+
+    /* for debbuging or not */
+    $config['mask_private_ip'] = 1; // Enable or disables SURFMap flow listing to show or hide Private IP address default 0
     
 ?>

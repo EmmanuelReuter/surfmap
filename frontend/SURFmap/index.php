@@ -4,6 +4,10 @@
      # Author: Rick Hofstede <r.j.hofstede@utwente.nl>
      # University of Twente, The Netherlands
      #
+     # Contributor :
+     # Emmanuel Reuter, < emmanuel.reuter@ird.fr>
+     # French Institute for Research and Developpement
+     #
      # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
      *******************************/
      
@@ -16,12 +20,18 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <title>SURFmap -- A Network Monitoring Tool Based on the Google Maps API</title>
+    <title>SURFmap -- A Network Monitoring Tool Based on the OpenLayer API</title>
     <link type="text/css" rel="stylesheet" href="lib/jquery/css/start/jquery-ui-1.10.4.custom.min.css" />
     <link type="text/css" rel="stylesheet" href="css/surfmap.css" />
-    <script type="text/javascript" src="https://maps.google.com/maps/api/js?sensor=false&v=3"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/6.5.0/ol.css" type="text/css">
+    <script src="/v6.15.1/build/ol.js"></script>
+	<!-- ol-ext -->
+    <script type="text/javascript" src="/v6.15.1/ol-ext.js"></script>
+
     <script type="text/javascript" src="lib/jquery/js/jquery-1.9.1.min.js"></script>
+    <!-- <script type="text/javascript" src="lib/jquery/js/jquery-3.7.0.min.js"></script>  -->
     <script type="text/javascript" src="lib/jquery/js/jquery-ui-1.10.4.custom.min.js"></script>
+<!-- <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js" integrity="sha256-eTyxS0rkjpLEo16uXTS0uVCS4815lc40K2iVpWDvdSY=" crossorigin="anonymous"></script> -->
     <!-- <script src="https://code.jquery.com/jquery-migrate-1.2.1.js"></script> -->
     <script type="text/javascript" src="lib/jquery_browser/jquery.browser.js"></script> <!-- https://github.com/gabceb/jquery-browser-plugin -->
     <script type="text/javascript" src="lib/json2/json2.js"></script> <!-- https://github.com/carhartl/jquery-cookie -->
@@ -59,6 +69,7 @@
         var geocoder_request_client;
         var reverse_geocoder_request;
         var resolved_hostnames;
+	var maskPrivateIP;
         
         // Dialog queues
         var error_dialog_queue = [];
@@ -68,8 +79,16 @@
         var lines;
         var markers;
         var map;
-        var geocoder = new google.maps.Geocoder();
-        var info_window = new google.maps.InfoWindow();
+
+ 	// test
+	var popupElement = document.createElement('div');
+	popupElement.className = 'popup'; // Assurez-vous de définir le style CSS approprié
+	var currentFeature;	
+	var info_window = new ol.Overlay({
+		element : popupElement,
+		stopEvent : false,
+    		positioning: 'bottom-center'
+	});
         
         var zoom_levels = {
             0:  'country',
@@ -95,7 +114,6 @@
             proccessData: false,
             type: 'POST'
         });
-        
         $(document).ajaxError(function(event, jqXHR, ajaxSettings, exception) {
             ajax_error = 1;
             $(document).trigger('loading_cancelled');
@@ -154,16 +172,20 @@
 </head>
 <body>
     <div id="header">
-        <span id="logo"><a href="http://www.utwente.nl/en" target="_blank"><img src="img/UT_Logo.png" alt="University of Twente"/></a></span>
+        <span id="logo">
+<a href="http://www.utwente.nl/en" target="_blank"><img src="img/UT_Logo.png" alt="University of Twente"/></a><br /><BR /> 
+       <a href="http://www.ird.fr/" target="_blank"><img src="img/logo-ird-small.png" alt="Institut de Recherche et de Developpement"/></a> 
+	 </span>
         <div id="header_line">&nbsp;</div>
         <div id="header_text">
-            <p><span>SURFmap</span><br>A network monitoring tool based on the Google Maps API</p>
+             <p><span>SURFmap</span> A network monitoring tool based on the OpenLayer Maps API</p> 
         </div>
     </div>
     <div id="error_messages" class="ui-state-error ui-corner-all" style="display:none;"></div>
     <div id="map_canvas"></div>
+	<br />
     <div id="footer">
-        <div id="legend">
+	<div id="legend">
             <div id="legend_description"></div>
             <div id="legend_scale">
                 <div id="legend_scale_color"></div>
@@ -174,6 +196,7 @@
                 </span>
             </div>
         </div>
+	<H3>&nbsp; </H3>
         <div class="footer" id="footerfunctions" style='float:right;'>
             <a href="Javascript:show_flow_details();" title="Show flow details">Flow details</a> | 
             <a href="Javascript:show_info('help');" title="Show help information">Help</a> | 
@@ -201,6 +224,21 @@
             </table>
         </div>
         <hr />
+        <div class="panel_section_title"><p>IP addressing</p></div>
+	<div class="panel_section_content">
+  	    <table>
+                <tr>
+                    <td style="width:55px"> </td>
+ 		    <td style="vertical-align:bottom">
+                        <form>
+                            <input type="checkbox"  id="maskPrivateIP" /><label for="mask_private_ip" >Mask Private IP</label>
+                        </form>
+                    </td>
+                    
+                </tr>
+            </table>
+        </div>
+	<hr />
         <div class="panel_section_title"><p>Options</p></div>
         <div class="panel_section_content" id="optionPanel">
             <form id="options">
@@ -244,11 +282,11 @@
                 
                 <!-- Aggregation fields -->
                 <div style="margin-top:10px; width:195px;">
-                    <div class="clickable unselectable" id="aggregation_label" title="Show aggregation options">
+                    <div class=" clickable unselectable" id="aggregation_label" title="Show aggregation options">
                         <div class="ui-state-default ui-corner-all no-icon-background" style="float:left;">
-                            <span class="ui-icon filter_label_icon ui-icon-triangle-1-e"></span>
+                            <span class="ui-icon aggregation_label_icon ui-icon-triangle-1-e"></span>
                         </div>
-                        <span class="disable-select" id="aggregation_label_text" style="float:left;">Aggregation</span><br />
+                        <span class="aggregation_label disable-select" id="aggregation_label_text" style="float:left;">Aggregation</span><br />
                     </div>
                     <table id="aggregation_fields">
                         <tr>
@@ -311,19 +349,30 @@
     <div id="warning_dialog"></div>
     <div id="info_dialog"></div>
     <div id="loading_dialog"></div>
-    
+    <div id="info_window"></div>
+    <div id="info_overlay"></div> 
     <script type="text/javascript">
         $('input#zoom_level_country').click(function () {
-            zoom(0, 2);
+            //zoom(0, 2);
+		remove_map_overlays();
+		add_map_overlays(0);
         });
         $('input#zoom_level_region').click(function () {
-            zoom(0, 5);
+            //zoom(0, 5);
+		remove_map_overlays();
+		add_map_overlays(1);
         });
         $('input#zoom_level_city').click(function () {
-            zoom(0, 8);
+            //zoom(0, 7);
+		zoom_level=2;
+		remove_map_overlays();
+		add_map_overlays(2);
         });
         $('input#zoom_level_host').click(function () {
-            zoom(0, 11);
+            //zoom(0, 10);
+		zoom_level=3;
+		remove_map_overlays();
+		add_map_overlays(3);
         });
         
        /*
@@ -384,6 +433,8 @@
             
             $.each(flow_data, function (flow_index, flow_item) {
                 $.each(zoom_levels, function (zoom_level_index, zoom_level) {
+
+			// un peu de debbugging
                     if (zoom_level_index == 0) { // Country
                         // If one end point is unkwnown (not geolocated), skip the current flow record
                         if (flow_item.src_country_lat == undefined || flow_item.dst_country_lat == undefined) {
@@ -400,33 +451,37 @@
                             return true;
                         }
                     }
-                    
+
+		    if ((flow_item.src_country_lng === undefined && flow_item.src_country_lat === undefined) ) {
+			// is it a bug ?
+			return true;
+                    }
                     // Copy flow information to local-scope variables
                     var point1, point2;
                     if (zoom_level_index == 0) { // Country
-                        point1 = new google.maps.LatLng(flow_item.src_country_lat, flow_item.src_country_lng);
-                        point2 = new google.maps.LatLng(flow_item.dst_country_lat, flow_item.dst_country_lng);
+			point1 = new ol.geom.Point([flow_item.src_country_lng, flow_item.src_country_lat]);
+			point2 = new ol.geom.Point([flow_item.dst_country_lng, flow_item.dst_country_lat]);
                     } else if (zoom_level_index == 1) { // Region
-                        point1 = new google.maps.LatLng(flow_item.src_region_lat, flow_item.src_region_lng);
-                        point2 = new google.maps.LatLng(flow_item.dst_region_lat, flow_item.dst_region_lng);
+			point1 = new ol.geom.Point([flow_item.src_region_lng, flow_item.src_region_lat]);
+			point2 = new ol.geom.Point([flow_item.dst_region_lng, flow_item.dst_region_lat]);
                     } else { // City & Host
                         if (is_extension_active('Location-aware exporting')) {
                             if (zoom_level_index == 2) { // City
-                                point1 = new google.maps.LatLng(flow_item.src_city_lat, flow_item.src_city_lng);
-                                point2 = new google.maps.LatLng(flow_item.dst_city_lat, flow_item.dst_city_lng);
+                                point1 = new ol.geom.Point([flow_item.src_city_lng, flow_item.src_city_lat]);
+                                point2 = new ol.geom.Point([flow_item.dst_city_lng, flow_item.dst_city_lat]);
                             } else { // Host
                                 // Flow destination is a mobile exporter
                                 if (flow_item.src_host_lat == undefined || flow_item.src_host_lng == undefined) {
-                                    point1 = new google.maps.LatLng(flow_item.src_city_lat, flow_item.src_city_lng);
-                                    point2 = new google.maps.LatLng(flow_item.dst_host_lat, flow_item.dst_host_lng);
+                                    point1 = new ol.geom.Point([flow_item.src_city_lng, flow_item.src_city_lat]);
+                                    point2 = new ol.geom.Point([flow_item.dst_host_lng, flow_item.dst_host_lat]);
                                 } else { // Flow source is a mobile exporter
-                                    point1 = new google.maps.LatLng(flow_item.src_host_lat, flow_item.src_host_lng);
-                                    point2 = new google.maps.LatLng(flow_item.dst_city_lat, flow_item.dst_city_lng);
+                                    point1 = new ol.geom.Point([flow_item.src_host_lng, flow_item.src_host_lat]);
+                                    point2 = new ol.geom.Point([flow_item.dst_city_lng, flow_item.dst_city_lat]);
                                 }
                             }
                         } else {
-                            point1 = new google.maps.LatLng(flow_item.src_city_lat, flow_item.src_city_lng);
-                            point2 = new google.maps.LatLng(flow_item.dst_city_lat, flow_item.dst_city_lng);
+                            point1 = new ol.geom.Point([flow_item.src_city_lng, flow_item.src_city_lat]);
+                            point2 = new ol.geom.Point([flow_item.dst_city_lng, flow_item.dst_city_lat]);
                         }
                     }
                     
@@ -438,8 +493,8 @@
                             return true;
                         }
                         
-                        if ((line.point1.equals(point1) && line.point2.equals(point2))
-                                || (line.point1.equals(point2) && line.point2.equals(point1))) {
+			if (line.point1.getCoordinates()[0] === point1.getCoordinates()[0] && line.point1.getCoordinates()[1] === point1.getCoordinates()[1] &&
+    				line.point2.getCoordinates()[0] === point2.getCoordinates()[0] && line.point2.getCoordinates()[1] === point2.getCoordinates()[1]) {
                             lines_index = line_index;
                             return false;
                         }
@@ -448,8 +503,8 @@
                     // Create line, if necessary
                     if (lines_index == -1) { // Line does NOT exist
                         var line = {};
-                        line.point1 = point1;
-                        line.point2 = point2;
+                        line.point1 = point1.clone();
+                        line.point2 = point2.clone();
                         line.level = parseInt(zoom_level_index, 10);
                         line.entries = [];
                         line.associated_flow_indices = [];
@@ -459,10 +514,10 @@
                     
                     // Update flow index association (i.e. index in 'flow_data' array)
                     lines[lines_index].associated_flow_indices.push(flow_index);
-                    
                     // Find line entry (if it exists)
                     var entries_index = -1; // -1: entry does not exist, >= 0: entry index in 'entries' array
                     $.each(lines[lines_index].entries, function (entry_index, entry) {
+
                         if (zoom_level_index == 0 // Country
                                 && entry.src_text.country == flow_item.src_country
                                 && entry.dst_text.country == flow_item.dst_country) {
@@ -561,15 +616,17 @@
             $.each(zoom_levels, function (zoom_level_index, zoom_level) {
                 $.each(lines, function (line_index, line) {
                     // Skip line if it doesn't belong to the current zoom level
+
                     if (line.level != zoom_level_index) {
                         return true;
                     }
                     
                     // Skip line if internal and that traffic should not be considered (setting in config.php)
-                    if (config['ignore_marker_internal_traffic_in_line_color_classification'] &&
-                            line.point1.equals(line.point2)) {
-                        return true;
-                    }
+			if (config['ignore_marker_internal_traffic_in_line_color_classification'] &&
+                                line.point1.getCoordinates()[0] === line.point2.getCoordinates()[0] 
+				&& line.point1.getCoordinates()[1] === line.point2.getCoordinates()[1]) {
+                                return true;
+                        }
                     
                     line.flows_sum = 0;
                     line.packets_sum = 0;
@@ -602,7 +659,9 @@
             
             // Initialize line objects
             $.each(zoom_levels, function (zoom_level_index, zoom_level) {
-                // Check whether global line minima/maxima are very close; if so, this may result in unbalanced color/thinkness ratios
+
+                // Check whether global line minima/maxima are very close; if so, 
+		// this may result in unbalanced color/thinkness ratios
                 if (global_line_maxima[zoom_level] - global_line_minima[zoom_level] == 1) {
                     global_line_minima[zoom_level]--;
                     global_line_maxima[zoom_level]++;
@@ -627,7 +686,6 @@
                     } else { // Bytes
                         line_sum = line.octets_sum;
                     }
-                    
                     var ratio = (line_sum - global_line_minima[zoom_level]) / (global_line_maxima[zoom_level] - global_line_minima[zoom_level]);
                     if (isNaN(ratio)) {
                         ratio = 0.75;
@@ -643,13 +701,12 @@
         
         function init_markers () {
             markers = [];
-            
             $.each(flow_data, function (flow_index, flow_item) {
                 $.each(zoom_levels, function (zoom_level_index, zoom_level) {
                     $.each(['src', 'dst'], function () {
                         // We assume the mobile device to have the highest port number of the flow
                         var location_aware_export = is_extension_active('Location-aware exporting') && flow_item['port_' + this] == Math.max(flow_item.port_src, flow_item.port_dst);
-                        
+                 
                         // Copy flow information to local-scope variables
                         var marker_text, entry_text, lat, lng;
                         if (zoom_level_index == 0) { // Country
@@ -678,7 +735,7 @@
                             lat             = flow_item[this + '_city_lat'];
                             lng             = flow_item[this + '_city_lng'];
                         }
-                        
+
                         if (location_aware_export) {
                             marker_text += " (Flowoid)";
                         }
@@ -687,20 +744,21 @@
                         var markers_index = -1; // -1: marker does not exist, >= 0: marker index in 'markers' array
                         $.each(markers, function (marker_index, marker) {
                             // Skip to next marker in case of wrong zoom level
+
                             if (marker.level != zoom_level_index) {
                                 return true;
                             }
-                            
-                            if (marker.point.equals(new google.maps.LatLng(lat, lng))) {
-                                markers_index = marker_index;
-                                return false;
-                            }
+				var newPoint = [lng,lat];
+				if (marker.point[0] === newPoint[0] && marker.point[1] === newPoint[1]) {
+    					markers_index = marker_index;
+    					return false;
+				}
                         });
                         
                         // Create marker, if necessary
                         if (markers_index == -1) {
                             var marker = {};
-                            marker.point = new google.maps.LatLng(lat, lng);
+			    marker.point = [lng,lat];
                             marker.level = zoom_level_index;
                             marker.entries = [];
                             marker.associated_flow_indices = [];
@@ -809,25 +867,33 @@
                         }
                     
                         // Check for internal traffic 'within' a marker
-                        if (line.point1.equals(line.point2)
-                                && line.point1.equals(marker.point)) {
-                            internal_traffic = true;
-                        }
+
+			var longitude = marker.point[0];
+			var latitude = marker.point[1];
+
+
+			if (line.point1.getCoordinates()[0] === line.point2.getCoordinates()[0] && line.point1.getCoordinates()[1] === line.point2.getCoordinates()[1]
+    				&& line.point1.getCoordinates()[0] ===longitude && line.point1.getCoordinates()[1] === latitude) {
+    				internal_traffic = true;
+			}
+
                         
                         if (marker.extension != undefined && marker.extension == 'Location-aware exporting') {
                             mobile_exporter = true;
                         }
                     });
-                    
+
                     if (internal_traffic) {
                         marker.obj = create_marker (marker.point, format_location_name(marker.text), info_window_contents, 'green');
                     } else if (mobile_exporter) {
                         marker.obj = create_marker (marker.point, format_location_name(marker.text), info_window_contents, 'blue');
                     } else {
-                        marker.obj = create_marker (marker.point, format_location_name(marker.text), info_window_contents);
+                        marker.obj = create_marker (marker.point, format_location_name(marker.text), info_window_contents, 'default');
                     }
                 });
             });
+
+	addPoint();
         }
      
         /*
@@ -910,7 +976,7 @@
             }
             
             var zoom_level_name = "";
-            switch (get_SM_zoom_level(map.getZoom())) {
+            switch (get_SM_zoom_level(map.getView().getZoom())) {
                 case 0:     zoom_level_name = "country";
                             break;
                             

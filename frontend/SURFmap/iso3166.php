@@ -6,8 +6,12 @@
      #
      # LICENSE TERMS: outlined in BSD-license.html
      *******************************/   
+
+if (!defined("MODULE_GEOIP")) {
+    require_once("../lib/MaxMind/geoip.inc");
+}
     
-    require_once("lib/MaxMind/geoip.inc");
+//    require_once("lib/MaxMind/geoip.inc");
     
     $geoIP = new GeoIP();
     
