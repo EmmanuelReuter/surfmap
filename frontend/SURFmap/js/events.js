@@ -2,6 +2,8 @@
  # events.js [SURFmap]
  # Author: Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *******************************/
@@ -55,6 +57,7 @@ $(document).ready(function() {
         $.ajax({
             url: 'json/getextensions.php',
             success: function(data) {
+		console.log(" getexension "+data.status);
                 if (data.status == 0) { // Success
                     $(document).trigger('active_extensions_list_loaded', data);
                 } else {
@@ -417,7 +420,7 @@ $(document).ready(function() {
             if (is_extension_active('Location-aware exporting')) {
                 var lat = parseFloat(this.loc_lat_int + "." + this.loc_lat_dec);
                 var lng = parseFloat(this.loc_lng_int + "." + this.loc_lng_dec);
-                var latlng = new google.maps.LatLng(lat, lng);
+                var latlng = ol.proj.fromLonLat([lng, lat]);
                 
                 // Check whether latlng is already listed for reverse geocoding
                 var found_index = -1;
@@ -462,7 +465,7 @@ $(document).ready(function() {
             var item = reverse_geocoder_request.shift();
             setTimeout(function () {
                 geocoder.geocode({ 'latLng': item }, function(results, status) {
-                    if (status == google.maps.GeocoderStatus.OK) {
+                    if (status === 'OK') {
                         geocoder_data_client.requests_success++;
                         
                         var result = {};
@@ -486,7 +489,7 @@ $(document).ready(function() {
                         });
                         
                         geocoder_data_client.reverse_geocoder_data.push(result);
-                    } else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
+                    } else if (status === 'OVER_QUERY_LIMIT') {
                         geocoder_data_client.requests_blocked++;
                 
                         // Add current request another time to geocoder_request_client for a retry
@@ -508,7 +511,7 @@ $(document).ready(function() {
                                 if (is_extension_active('Location-aware exporting')) {
                                     var lat = parseFloat(flow_item.loc_lat_int + "." + flow_item.loc_lat_dec);
                                     var lng = parseFloat(flow_item.loc_lng_int + "." + flow_item.loc_lng_dec);
-                                    var latlng = new google.maps.LatLng(lat, lng);
+                                    var latlng = ol.proj.fromLonLat([lng, lat]);
             
                                     if (geocoder_item.request.equals(latlng)) {
                                         // Mobile flow exporter is source of flow
@@ -573,6 +576,8 @@ $(document).ready(function() {
                 $(document).trigger('prepare_geocoding');
                 return false;
             }
+
+	    console.log('geocoder_request'.geocoder_request);
             
             // Geocoder data
             $.ajax({
@@ -647,7 +652,10 @@ $(document).ready(function() {
     });
     
     $(document).bind('geocoder_data_loaded', function () {
-        $(document).trigger('prepare_geocoding');
+        //$(document).trigger('prepare_geocoding');
+	//$(document).trigger('geocoding_done');
+	$(document).trigger('process_map_elements');
+
     });
     
     $(document).bind('prepare_geocoding', function () {
@@ -668,14 +676,14 @@ $(document).ready(function() {
                     || this.src_country_lat == undefined && this.src_country_lng == undefined)
                     && this.src_country != "(UNKNOWN)"
                     && $.inArray(this.src_country + src_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.src_country + src_continent_str);
+                //geocoder_request.push(this.src_country + src_continent_str);
             }
             if ((this.src_region_lat == -1 && this.src_region_lng == -1
                     || this.src_region_lat == undefined && this.src_region_lng == undefined)
                     && this.src_country != "(UNKNOWN)"
                     && this.src_region != "(UNKNOWN)"
                     && $.inArray(this.src_country + ";" + this.src_region + src_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.src_country + ";" + this.src_region + src_continent_str);
+                //geocoder_request.push(this.src_country + ";" + this.src_region + src_continent_str);
             }
             if ((this.src_city_lat == -1 && this.src_city_lng == -1
                     || this.src_city_lat == undefined && this.src_city_lng == undefined)
@@ -683,7 +691,7 @@ $(document).ready(function() {
                     && this.src_region != "(UNKNOWN)"
                     && this.src_city != "(UNKNOWN)"
                     && $.inArray(this.src_country + ";" + this.src_region + ";" + this.src_city + src_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.src_country + ";" + this.src_region + ";" + this.src_city + src_continent_str);
+                //geocoder_request.push(this.src_country + ";" + this.src_region + ";" + this.src_city + src_continent_str);
             }
             if ((this.src_city_lat == -1 && this.src_city_lng == -1
                     || this.src_city_lat == undefined && this.src_city_lng == undefined)
@@ -691,7 +699,7 @@ $(document).ready(function() {
                     && this.src_region == "(UNKNOWN)"
                     && this.src_city != "(UNKNOWN)"
                     && $.inArray(this.src_country + ";" + this.src_city + src_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.src_country + ";" + this.src_city + src_continent_str);
+                //geocoder_request.push(this.src_country + ";" + this.src_city + src_continent_str);
             }
                     
             /* Destination */
@@ -700,14 +708,14 @@ $(document).ready(function() {
                     || this.dst_country_lat == undefined && this.dst_country_lng == undefined)
                     && this.dst_country != "(UNKNOWN)"
                     && $.inArray(this.dst_country + dst_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.dst_country + dst_continent_str);
+                //geocoder_request.push(this.dst_country + dst_continent_str);
             }
             if ((this.dst_region_lat == -1 && this.dst_region_lng == -1
                     || this.dst_region_lat == undefined && this.dst_region_lng == undefined)
                     && this.dst_country != "(UNKNOWN)"
                     && this.dst_region != "(UNKNOWN)"
                     && $.inArray(this.dst_country + ";" + this.dst_region + dst_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.dst_country + ";" + this.dst_region + dst_continent_str);
+                //geocoder_request.push(this.dst_country + ";" + this.dst_region + dst_continent_str);
             }
             if ((this.dst_city_lat == -1 && this.dst_city_lng == -1
                     || this.dst_city_lat == undefined && this.dst_city_lng == undefined)
@@ -715,7 +723,7 @@ $(document).ready(function() {
                     && this.dst_region != "(UNKNOWN)"
                     && this.dst_city != "(UNKNOWN)"
                     && $.inArray(this.dst_country + ";" + this.dst_region + ";" + this.dst_city + dst_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.dst_country + ";" + this.dst_region + ";" + this.dst_city + dst_continent_str);
+                //geocoder_request.push(this.dst_country + ";" + this.dst_region + ";" + this.dst_city + dst_continent_str);
             }
             if ((this.dst_city_lat == -1 && this.dst_city_lng == -1
                     || this.dst_city_lat == undefined && this.dst_city_lng == undefined)
@@ -723,7 +731,7 @@ $(document).ready(function() {
                     && this.dst_region == "(UNKNOWN)"
                     && this.dst_city != "(UNKNOWN)"
                     && $.inArray(this.dst_country + ";" + this.dst_city + dst_continent_str, geocoder_request) == -1) {
-                geocoder_request.push(this.dst_country + ";" + this.dst_city + dst_continent_str);
+                //geocoder_request.push(this.dst_country + ";" + this.dst_city + dst_continent_str);
             }
         });
         
@@ -824,43 +832,12 @@ $(document).ready(function() {
         if (geocoder_request_client.length == 0) {
             $(document).trigger('geocoding_client_done');
         } else {
-            $(document).trigger('geocode');
+            //$(document).trigger('geocode');
+		$(document).trigger('geocoding_client_done');
         }
     });
     
-    $(document).bind('geocode', function () {
-        if (geocoder_request_client.length > 0) {
-            var item = geocoder_request_client.shift();
-            setTimeout(function () {
-                geocoder.geocode({ 'address': item }, function(results, status) {
-                    if (status == google.maps.GeocoderStatus.OK) {
-                        geocoder_data_client.requests_success++;
-                        
-                        var result = {};
-                        result['request'] = item;
-                        result['lat'] = results[0].geometry.location.lat();
-                        result['lng'] = results[0].geometry.location.lng();
-                        
-                        geocoder_data_client.geocoder_data.push(result);
-                    } else if (status == google.maps.GeocoderStatus.OVER_QUERY_LIMIT) {
-                        geocoder_data_client.requests_blocked++;
-                        
-                        // Add current request another time to geocoder_request_client for a retry
-                        geocoder_request_client.push(item);
-                    } else {
-                        geocoder_data_client.requests_error++;
-                    }
-                    
-                    // If ready, start remaining processing
-                    if (geocoder_data_client.request_count == geocoder_data_client.requests_success + geocoder_data_client.requests_error) {
-                        $(document).trigger('geocoding_client_done');
-                    } else { // Else, continue geocoding
-                        $(document).trigger('geocode');
-                    }
-                });
-            }, constants['default_geocoder_request_interval']);
-        }
-    });
+    // $(document).bind('geocode', function () {
     
     $(document).bind('geocoding_server_done', function (event, data) {
         geocoder_data_server.geocoder_data = data.geocoder_data;
@@ -999,12 +976,11 @@ $(document).ready(function() {
     
     $(document).bind('process_map_elements', function () {
         show_loading_message('Processing map elements');
-        
         complement_location_information();
         remove_map_overlays();
         init_lines();
         init_markers();
-        add_map_overlays(get_SM_zoom_level(map.getZoom()));
+        add_map_overlays(get_SM_zoom_level(map.getView().getZoom()));
         init_legend();
         
         $(document).trigger('loaded');

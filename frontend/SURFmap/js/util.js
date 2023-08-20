@@ -2,6 +2,8 @@
  # util.js [SURFmap]
  # Author: Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *******************************/
@@ -88,8 +90,17 @@
      * Parameters:
      *      name - name that has to be converted
      */         
-    function format_location_name (name) {
-        var name = name.toLowerCase();
+    function format_location_name (namelocation) {
+	var name;
+	if (namelocation !== undefined && namelocation !== null && namelocation !== '') {
+        	name = namelocation.toLowerCase();
+        // Autres opérations que vous souhaitez effectuer ici avec 'name'
+    	} else {
+        	//console.log("La variable namelocation n'est pas définie ou n'a pas de valeur.");
+		return "NA";
+    	}
+
+        var name = namelocation.toLowerCase();
         
         // Many geolocation databases use 'NETHERLANDS' instead of 'THE NETHERLANDS'
         if (name == 'netherlands') {

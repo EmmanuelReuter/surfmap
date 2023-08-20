@@ -1,7 +1,9 @@
-/******************************
+/bin/bash: q: command not found
  # dialogs.js [SURFmap]
  # Author: Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *******************************/
@@ -210,6 +212,9 @@
             text = 'SURFmap has been developed by:<br /><br /> \
                     Rick Hofstede<br /> \
                     <i>University of Twente, The Netherlands</i><br /><hr /> \
+                    Adapt to OpenLayer by <br /> \
+                    Emmanuel Reuter<br /> \
+                    <i>French Institute for Reseach and Development, New Caledonia</i><br /><hr /> \
                     Included third-party software: \
                     <ul> \
                         <li><a href=\"http://www.erichynds.com/jquery/jquery-ui-multiselect-widget/\" target=\"_blank\" style=\"text-decoration:underline;\">jQuery UI MultiSelect Widget</a> / Eric Hynds</li> \
@@ -582,11 +587,17 @@
                     } else if (key == 'start_time') {
                         field.text(flow_item[key].substring(0, flow_item[key].lastIndexOf('.') + 2));
                     } else if (key == 'duration') {
-                        field.text(flow_item[key].toFixed(1));
+                        //field.text(flow_item[key].toFixed(1));
+                        field.text(convertDuration(flow_item[key].toFixed(1)));
                     } else {
-                        field.text(flow_item[key]);
+			if (key == 'ip_src') {
+				field.text(mask_private_IP(flow_item[key]));
+                    	} else if (key == 'ip_dst') {
+                        	field.text(mask_private_IP(flow_item[key]));
+                    	} else {
+				field.text(flow_item[key]);
+			}
                     }
-                
                     body_line.append(field);
                 }
             
@@ -629,7 +640,7 @@
         if (resolved_hostnames != undefined) {
             $.each(resolved_hostnames, function (index, tuple) {
                 var ip_address = $('#info_dialog .flow_info_table td:contains(' + tuple.address + ')');
-            
+           
                 // If the IP address is present, add its hostname
                 if (ip_address.length > 0) {
                     ip_address.attr('title', tuple.hostname);
@@ -637,3 +648,179 @@
             });
         }
     }
+
+
+ function show_marker_flow_details (markers_index) {
+        // Trouver l'index du marqueur qui a été cliqué
+        var flow_details_button = $('.flow_info_table a:contains(Flow Details)');
+        // var markers_index = parseInt(flow_details_button.attr('id').substr(flow_details_button.attr('id').lastIndexOf( "-") +1), 10);
+    var associated_flow_indices = markers[markers_index].associated_flow_indices;
+    // Les adresses IP ne sont affichées qu'au niveau de zoom Host
+    if (get_SM_zoom_level(map.getView().getZoom()) === 3) {
+        // Trouver les adresses IP à résoudre en noms d'hôtes
+        var IP_addresses = [];
+                $.each($('#map_canvas .flow_info_table td[class*=ip_address]:visible'), function () {
+                    if (jQuery.inArray($(this).text(), IP_addresses) == -1) {
+                        IP_addresses.push($(this).text());
+                    }
+                });
+                var IP_addresses_to_be_removed = [];
+                $.each(IP_addresses, function (address_index, address) {
+                    if (resolved_hostnames != undefined) {
+                        $.each(resolved_hostnames, function (index, tuple) {
+                            if (tuple.address == address) {
+                                IP_addresses_to_be_removed.push(address_index);
+                                $('.flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
+                                return false;
+                            }
+                        });
+                    }
+                });
+                // Perform IP address removal
+                $.each(IP_addresses_to_be_removed, function (address_counter, address_index) {
+                    // Indices need to be compensated for removal
+                    IP_addresses.splice(address_index - address_counter, 1);
+                });
+                // Resolve hostnames
+                if (config['resolve_hostnames'] && IP_addresses.length > 0) {
+                    $.ajax({
+                        url: 'json/resolvehostnames.php',
+                        data: {
+                            params: IP_addresses
+                        },
+                        success: function(data) {
+                            if (data.status == 0) { // Success
+                                if (resolved_hostnames == undefined) {
+                                    resolved_hostnames = [];
+                                }
+
+                                $.each(data.hostnames, function (index, tuple) {
+                                    resolved_hostnames.push(tuple);
+
+                                    // Add hostnames as tooltip to IP addresses
+                    $('#map_canvas .flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
+                                });
+                            } else {
+                                show_error(815, data.status_message);
+                            }
+                        },
+                        error: function() {
+                            show_error(800);
+                        }
+                    });
+                }
+            }
+
+                show_flow_details(associated_flow_indices);
+
+            // Make all instances of 'Not available' in information windows italic
+            $('.flow_info_table td:contains(Not available)').css('font-style', 'italic');
+
+
+    } // show_marker_flow_details
+function show_line_flow_details(lines_index) {
+
+            var associated_flow_indices = lines[lines_index].associated_flow_indices;
+            // IP address are only shown at the Host zoom level
+            //if (get_SM_zoom_level(map.getView().getZoom()) == 3) {
+            if (true) {
+                // Find IP addresses to be resolved to hostnames
+                var IP_addresses = [];
+                $.each(associated_flow_indices, function () {
+                    // Only add IP address if it is not already present
+                    if (jQuery.inArray(flow_data[this]['ip_src'], IP_addresses) == -1) {
+                        IP_addresses.push(flow_data[this]['ip_src']);
+                    }
+                    if (jQuery.inArray(flow_data[this]['ip_dst'], IP_addresses) == -1) {
+                        IP_addresses.push(flow_data[this]['ip_dst']);
+                    }
+                });
+                // Check which IP addresses have already been resolved and remove them from the list
+                var IP_addresses_to_be_removed = [];
+                $.each(IP_addresses, function (address_index, address) {
+                    if (resolved_hostnames != undefined) {
+                        $.each(resolved_hostnames, function (index, tuple) {
+                            if (tuple.address == address) {
+                                IP_addresses_to_be_removed.push(address_index);
+                                // Add (previously resolved) hostname as tooltip to IP address
+                                $('#map_canvas .flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
+
+                                return false;
+                            }
+                        });
+                    }
+                });
+
+                // Perform IP address removal
+                $.each(IP_addresses_to_be_removed, function (address_counter, address_index) {
+                    // Indices need to be compensated for removal
+                    IP_addresses.splice(address_index - address_counter, 1);
+                });
+
+                // Resolve hostnames
+                if (config['resolve_hostnames'] && IP_addresses.length > 0) {
+                    $.ajax({
+                        url: 'json/resolvehostnames.php',
+                        data: {
+                            params: IP_addresses
+                        },
+                        success: function(data) {
+                            if (data.status == 0) { // Success
+                                if (resolved_hostnames == undefined) {
+                                    resolved_hostnames = [];
+                                }
+
+                                $.each(data.hostnames, function (index, tuple) {
+                                    resolved_hostnames.push(tuple);
+
+                                    // Add hostnames as tooltip to IP addresses
+                                    $('#map_canvas .flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
+                                });
+                            } else {
+                                show_error(815, data.status_message);
+                            }
+                        },
+                        error: function() {
+                            show_error(800);
+                        }
+                    });
+                }
+            }
+
+            show_flow_details(associated_flow_indices);
+            // Make all instances of 'Not available' in information windows italic
+            $('.flow_info_table td:contains(Not available)').css('font-style', 'italic');
+} // show_line_flow_details
+
+function mask_private_IP(ipAddress) {
+    var privateIPRegex = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01]))/;
+    if (maskPrivateIP) {
+    	return privateIPRegex.test(ipAddress) ? '***' : ipAddress;
+    } else {
+	return ipAddress;
+    }
+}
+
+function convertDuration(durationInSeconds) {
+    var days = Math.floor(durationInSeconds / (24 * 60 * 60));
+    durationInSeconds -= days * 24 * 60 * 60;
+    
+    var hours = Math.floor(durationInSeconds / (60 * 60));
+    durationInSeconds -= hours * 60 * 60;
+    
+    var minutes = Math.floor(durationInSeconds / 60);
+    durationInSeconds -= minutes * 60;
+    
+    var seconds = durationInSeconds;
+    if (days >= 2) {
+		return `${days}d:${hours}h`;
+	}
+    else {	
+	hours=hours+24;
+	if (minutes > 1) {
+    		return `${hours}h:${minutes}m`;
+	} else {
+    		return `${hours}h:${seconds}s`;
+	}
+    }
+}

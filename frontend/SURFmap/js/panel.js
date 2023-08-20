@@ -2,6 +2,8 @@
  # panel.js [SURFmap]
  # Author: Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *******************************/
@@ -139,7 +141,7 @@
                     }
                 }, 500);
                 
-                info_window.close();    
+		info_window.setPosition(undefined);
                 $('input[type=submit]', this).prop('disabled', true);
                 $('div.panel_trigger').trigger('click');
                 return false;
@@ -153,7 +155,7 @@
      */
     function configure_panel () {
         // Zoom level table
-        switch (get_SM_zoom_level(map.getZoom())) {
+        switch (get_SM_zoom_level(map.getView().getZoom())) {
             case 0:     $('#zoom_level_country').prop('checked', true);
                         break;
                         
@@ -197,6 +199,18 @@
                 $(document).trigger('load_session_data', { 'update_time_period': 1 });
             }, constants['refresh_interval'] * 1000);
         }
+
+	 // mask private IP
+	maskPrivateIP=config['mask_private_ip'];
+        if (maskPrivateIP) { $('#maskPrivateIP').prop('checked', 1); }
+        $('#maskPrivateIP').click(function (event) {
+            if ($('#maskPrivateIP').is(':checked')) {
+				maskPrivateIP=1;
+			} else {
+				maskPrivateIP=0;
+			}
+        });
+
         
         // NfSen sources
         var truncated_nfsen_profile = (session_data['nfsen_profile'].length > 22) ? session_data['nfsen_profile'].substr(0, 22) + "..." : session_data['nfsen_profile'];
@@ -411,10 +425,11 @@
             });
         });
         $('#aggregation_label').click(function(event) {
+
             var icon;
-            if (event.target.id == 'aggregation_label_text') {
+            if (event.target.className == 'aggregation_label_text') {
                 icon = $(this).parent().find('span:first');
-            } else if (event.target.id.indexOf('aggregation_label') != -1) {
+            } else if (event.target.className.indexOf('aggregation_label') != -1) {
                 icon = $(this).find('span:first');
             }
             icon.toggleClass('ui-icon-triangle-1-e').toggleClass('ui-icon-triangle-1-s');

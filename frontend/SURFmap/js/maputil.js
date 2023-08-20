@@ -2,6 +2,8 @@
  # maputil.js [SURFmap]
  # Author: Rick Hofstede <r.j.hofstede@utwente.nl>
  # University of Twente, The Netherlands
+ # Adapt to OpenLayer by Emmanuel.Reuter@ird.fr
+ # Franch Institue for Research and Development
  #
  # LICENSE TERMS: 3-clause BSD license (outlined in license.html)
  *******************************/
@@ -17,111 +19,32 @@
     *     weight - width of the line (in pixels)
     */
     function create_line (coordinate1, coordinate2, text, color, weight) {
-        var lineOptions = {
-            geodesic: true,
-            path: [coordinate1, coordinate2],
-            strokeColor: color,
-            strokeOpacity: 0.7,
-            strokeWeight: weight
-        };
-        var line = new google.maps.Polyline(lineOptions);
-            
-        google.maps.event.addListener(line, 'click', function(event) {
-            map.setCenter(event.latLng);
-            info_window.close();
-                
-            if (event.latLng == undefined) {
-                // When click_random_line() is used, a google.maps.LatLng object is passed as the 'event' parameter
-                info_window.setPosition(event);
-            } else {
-                info_window.setPosition(event.latLng);
-            }
-                
-            info_window.setContent(text);
-            info_window.open(map);
-            
-            // Find index of line that has been clicked
-            var flow_details_button = $('.flow_info_table a:contains(Flow Details)');
-            var lines_index = parseInt(flow_details_button.attr('id').substr(flow_details_button.attr('id').lastIndexOf("-") + 1), 10);
-            var associated_flow_indices = lines[lines_index].associated_flow_indices;
-            
-            // IP address are only shown at the Host zoom level
-            if (get_SM_zoom_level(map.getZoom()) == 3) {
-                // Find IP addresses to be resolved to hostnames
-                var IP_addresses = [];
-                $.each(associated_flow_indices, function () {
-                    // Only add IP address if it is not already present
-                    if (jQuery.inArray(flow_data[this]['ip_src'], IP_addresses) == -1) {
-                        IP_addresses.push(flow_data[this]['ip_src']);
-                    }
-                    if (jQuery.inArray(flow_data[this]['ip_dst'], IP_addresses) == -1) {
-                        IP_addresses.push(flow_data[this]['ip_dst']);
-                    }
-                });
-            
-                // Check which IP addresses have already been resolved and remove them from the list
-                var IP_addresses_to_be_removed = [];
-                $.each(IP_addresses, function (address_index, address) {
-                    if (resolved_hostnames != undefined) {
-                        $.each(resolved_hostnames, function (index, tuple) {
-                            if (tuple.address == address) {
-                                IP_addresses_to_be_removed.push(address_index);
-                            
-                                // Add (previously resolved) hostname as tooltip to IP address
-                                $('#map_canvas .flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
-                            
-                                return false;
-                            }
-                        });
-                    }
-                });
-            
-                // Perform IP address removal
-                $.each(IP_addresses_to_be_removed, function (address_counter, address_index) {
-                    // Indices need to be compensated for removal
-                    IP_addresses.splice(address_index - address_counter, 1);
-                });
-            
-                // Resolve hostnames
-                if (config['resolve_hostnames'] && IP_addresses.length > 0) {
-                    $.ajax({
-                        url: 'json/resolvehostnames.php',
-                        data: { 
-                            params: IP_addresses
-                        },
-                        success: function(data) {
-                            if (data.status == 0) { // Success
-                                if (resolved_hostnames == undefined) {
-                                    resolved_hostnames = [];
-                                }
-                            
-                                $.each(data.hostnames, function (index, tuple) {
-                                    resolved_hostnames.push(tuple);
-                                
-                                    // Add hostnames as tooltip to IP addresses
-                                    $('#map_canvas .flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
-                                });
-                            } else {
-                                show_error(815, data.status_message);
-                            }
-                        },
-                        error: function() {
-                            show_error(800);
-                        }
-                    });
-                }
-            }
-            
-            // Attach click handler for opening Flow Details
-            flow_details_button.click(function (event) {
-                show_flow_details(associated_flow_indices);
-            });
-            
-            // Make all instances of 'Not available' in information windows italic
-            $('.flow_info_table td:contains(Not available)').css('font-style', 'italic');
-        });
-            
-        return line;
+	// Définir le style visuel de la ligne
+
+	var lineStyle = new ol.style.Style({
+    		stroke: new ol.style.Stroke({
+        	color: color,
+        	width: weight,
+        	opacity: 0.7
+    		})
+	});
+	// Créer la feature (entité) de la ligne avec la géométrie et le style
+	var lineFeature = new ol.Feature({
+    		geometry:  new ol.geom.LineString([
+			[coordinate1.getCoordinates()[0], coordinate1.getCoordinates()[1]],
+     			[coordinate2.getCoordinates()[0], coordinate2.getCoordinates()[1]]
+			]),
+		description: text,
+	});
+	lineFeature.setStyle(lineStyle);
+		// Ajouter la feature à une couche
+	var lineLayer = new ol.layer.Vector({
+    		source: new ol.source.Vector({
+        	features: [lineFeature]
+    		})
+	});
+	map.addLayer(lineLayer);
+	return lineLayer;
     }
     
    /*
@@ -134,107 +57,79 @@
     *     color - can be 'green' or 'red' (undefined results in 'red')
     */          
     function create_marker (coordinates, title, text, color) {
+
         var marker_options = {
                 position: coordinates,
                 title: title
         };
-        if (color == 'green') {
-            var green_marker = new google.maps.MarkerImage("img/markers/green-dot.png", new google.maps.Size(22, 40));
-            marker_options['icon'] = green_marker;
-        } else if (color == 'blue') {
-            var blue_marker = new google.maps.MarkerImage("img/markers/blue-dot.png", new google.maps.Size(30, 30));
-            marker_options['icon'] = blue_marker;
-        }
-        
-        var marker = new google.maps.Marker(marker_options);
+	var markerOptions;
+	var markerindex = markers.length;
+	var greenIcon ;
+	var blueIcon;
 
-        google.maps.event.addListener(marker, 'click', function(event) {
-            map.setCenter(event.latLng);
-            info_window.close();
-            info_window.setContent(text);
-            info_window.open(map, marker);
-            
-            // Find index of marker that has been clicked
-            var flow_details_button = $('.flow_info_table a:contains(Flow Details)');
-            var markers_index = parseInt(flow_details_button.attr('id').substr(flow_details_button.attr('id').lastIndexOf("-") + 1), 10);
-            var associated_flow_indices = markers[markers_index].associated_flow_indices;
-            
-            
-            // IP address are only shown at the Host zoom level
-            if (get_SM_zoom_level(map.getZoom()) == 3) {
-                // Find IP addresses to be resolved to hostnames
-                var IP_addresses = [];
-                $.each($('#map_canvas .flow_info_table td[class*=ip_address]:visible'), function () {
-                    // Only add IP address if it is not already present
-                    if (jQuery.inArray($(this).text(), IP_addresses) == -1) {
-                        IP_addresses.push($(this).text());
-                    }
+	var defaultStyle = new ol.style.Style({
+    		image: new ol.style.Circle({
+        	radius: 5,
+        	fill: new ol.style.Fill({
+            	color: 'red' // Couleur de remplissage rouge
+        	}),
+        	stroke: new ol.style.Stroke({
+            		color: 'red', // Couleur du contour rouge
+            		width: 1
+        	}),
+	
+    		}),
+		    geometry: function(feature) {
+        if (map.getView().getZoom() >= 10 && map.getView().getZoom() <= 15) {
+            return feature.getGeometry();
+        } else {
+            return null; // Ne pas afficher l'élément si la condition de zoom n'est pas remplie
+        }
+    }
+	});
+
+	if (color === 'green') {
+    		greenIcon = new ol.style.Style({
+			image: new ol.style.Icon({
+        			src: 'img/markers/green-dot.png',
+			}),
+    		});
+    		markerOptions = greenIcon ;
+	} else if (color === 'blue') {
+    		blueIcon = new ol.style.Style({
+			image : new ol.style.Icon ({
+        			src: 'img/markers/blue-dot.png',
+				}),
+    		});
+    		markerOptions =  blueIcon ;
+	} else {
+		markerOptions= new ol.style.Style({
+                        image: new ol.style.Icon({
+                                src: 'img/markers/green-dashed2-dot.png',
+                        }),
                 });
-            
-                // Check which IP addresses have already been resolved and remove them from the list
-                var IP_addresses_to_be_removed = [];
-                $.each(IP_addresses, function (address_index, address) {
-                    if (resolved_hostnames != undefined) {
-                        $.each(resolved_hostnames, function (index, tuple) {
-                            if (tuple.address == address) {
-                                IP_addresses_to_be_removed.push(address_index);
-                            
-                                // Add (previously resolved) hostname as tooltip to IP address
-                                $('.flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
-                            
-                                return false;
-                            }
-                        });
-                    }
-                });
-            
-                // Perform IP address removal
-                $.each(IP_addresses_to_be_removed, function (address_counter, address_index) {
-                    // Indices need to be compensated for removal
-                    IP_addresses.splice(address_index - address_counter, 1);
-                });
-            
-                // Resolve hostnames
-                if (config['resolve_hostnames'] && IP_addresses.length > 0) {
-                    $.ajax({
-                        url: 'json/resolvehostnames.php',
-                        data: { 
-                            params: IP_addresses
-                        },
-                        success: function(data) {
-                            if (data.status == 0) { // Success
-                                if (resolved_hostnames == undefined) {
-                                    resolved_hostnames = [];
-                                }
-                            
-                                $.each(data.hostnames, function (index, tuple) {
-                                    resolved_hostnames.push(tuple);
-                                
-                                    // Add hostnames as tooltip to IP addresses
-                                    $('#map_canvas .flow_info_table td:contains(' + tuple.address + ')').attr('title', tuple.hostname);
-                                });
-                            } else {
-                                show_error(815, data.status_message);
-                            }
-                        },
-                        error: function() {
-                            show_error(800);
-                        }
-                    });
-                }
-            }
-            
-            // Attach click handler for opening Flow Details
-            flow_details_button.click(function (event) {
-                show_flow_details(associated_flow_indices);
-            });
-            
-            // Make all instances of 'Not available' in information windows italic
-            $('.flow_info_table td:contains(Not available)').css('font-style', 'italic');
+
+	}
+		
+	//console.log('green marker '+color+'  '+JSON.stringify(coordinates)+' title '+title+'  '+text);
+	var marker = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                features: [
+                        new ol.Feature({ 
+				geometry: new ol.geom.Point([coordinates[0],coordinates[1]]),
+				description: text,
+				title: title,
+				pos : markerindex,
+				style : markerOptions,
+                        })
+                ]
+                }),
+                style : markerOptions,
         });
 
+
         return marker;
-    }
+    };
     
     /*
      * Generates the HTML (table) code for a line, based on the specified
@@ -343,16 +238,18 @@
         });
         
         var footer = $('<tr/>', {'class': 'footer'});
-        
+        var point1=lines[lines_index].point1.getCoordinates();
+	var point2=lines[lines_index].point2.getCoordinates(); 
         var column_count = 6;
         var footer_contents = $('<td/>', { 'colspan': column_count });
         var zoom_in = $('<a/>', { 'href': 'Javascript:zoom(0)' }).text('Zoom In');
         var zoom_out = $('<a/>', { 'href': 'Javascript:zoom(1)' }).text('Zoom Out');
         var quick_zoom_in = $('<a/>', { 'href': 'Javascript:quick_zoom(0)' }).text('Quick Zoom In');
         var quick_zoom_out = $('<a/>', { 'href': 'Javascript:quick_zoom(1)' }).text('Quick Zoom Out');
-        var flow_details = $('<a/>', { 'id': 'flow_details lines_index-' + lines_index, 'href': 'Javascript:' }).text('Flow Details'); // Click handler is attached in create_line when info_window is opened
-        var jump_source = $('<a/>', { 'href': 'Javascript:map.setCenter(lines[' + lines_index + '].point1)' }).text('Jump to source marker');
-        var jump_destination = $('<a/>', { 'href': 'Javascript:map.setCenter(lines[' + lines_index + '].point2)' }).text('Jump to destination marker');
+	// Click handler is attached in create_line when info_window is opened
+        var flow_details = $('<a/>', { 'id': 'flow_details lines_index-' + lines_index, 'href': 'Javascript:show_line_flow_details('+lines_index+')' }).text('Flow Details'); 
+	var jump_source = $('<a/>', { 'href': 'Javascript:map.getView().setCenter(['+point1+'])' }).text('Jump to source marker');
+        var jump_destination = $('<a/>', { 'href': 'Javascript:map.getView().setCenter([' +point2+'])' }).text('Jump to destination marker');
         
         footer_contents.append(zoom_in).append(' - ').append(zoom_out).append(' | ');
         footer_contents.append(quick_zoom_in).append(' - ').append(quick_zoom_out).append(' | ').append(flow_details).append('<br/>');
@@ -410,8 +307,10 @@
         var zoom_out = $('<a/>', { 'href': 'Javascript:zoom(1)' }).text('Zoom Out');
         var quick_zoom_in = $('<a/>', { 'href': 'Javascript:quick_zoom(0)' }).text('Quick Zoom In');
         var quick_zoom_out = $('<a/>', { 'href': 'Javascript:quick_zoom(1)' }).text('Quick Zoom Out');
-        var flow_details = $('<a/>', { 'id': 'flow_details markers_index-' + markers_index, 'href': 'Javascript:' }).text('Flow Details'); // Click handler is attached in create_line when info_window is opened
-        
+       
+	// Click handler is attached in create_line when info_window is opened
+	var flow_details = $('<a/>', { 'id': 'flow_details markers_index-' + markers_index, 'href': 'Javascript:show_marker_flow_details('+markers_index+')' }).text('Flow Details'); 
+ 
         footer_contents.append(zoom_in).append(' - ').append(zoom_out).append(' | ').append(flow_details).append('<br/>');
         footer_contents.append(quick_zoom_in).append(' - ').append(quick_zoom_out);
         
@@ -430,11 +329,11 @@
         
         if (gm_level <= 4) {
             level = 0;  // Country: 2-4
-        } else if (gm_level >= 5 && gm_level <= 7) {
+        } else if (gm_level > 4 && gm_level < 8) {
             level = 1;  // Region: 5-7
-        } else if (gm_level >= 8 && gm_level <= 10) {
+        } else if (gm_level >= 8 && gm_level < 11) {
             level = 2;  // City: 8-10
-        } else if (gm_level >= 11 && gm_level <= 13) {
+        } else if (gm_level >= 11 ) {
             level = 3;  // Host: 11-13
         }
         
@@ -447,11 +346,12 @@
      *     sm_level - the SURFmap zoom level that has to be converted to a Google Maps zoom level
      */          
     function get_GM_zoom_level (sm_level) {
-        if (sm_level == 0) { // Country
+	//return get_SM_zoom_level(sm_level);
+        if (sm_level ==0 ) { // Country
             return 2;
-        } else if (sm_level == 1) { // Region
+        } else if (sm_level == 1 ) { // Region
             return 5;
-        } else if (sm_level == 2) { // City
+        } else if (sm_level ==2) { // City
             return 8;
         } else { // Host
             return 11;
@@ -462,86 +362,163 @@
      * Initializes the Google Maps map object and adds listeners to it.
      */
     function init_map () {
-        google.maps.visualRefresh = true; // https://developers.google.com/maps/documentation/javascript/basics
+          var map_center = ol.proj.fromLonLat([
+        parseFloat(session_data['map_center'].substring(session_data['map_center'].indexOf(",") + 1)),
+        parseFloat(session_data['map_center'].substring(0, session_data['map_center'].indexOf(",")))
+    		]);
+
+    	if (isNaN(map_center[0]) || isNaN(map_center[1])) {
+        	show_error(996);
+		map_center=[0,0];
+    	} 
+    	map = new ol.Map({
+        	target: 'map_canvas',
+        	view: new ol.View({
+            		center: map_center,
+			projection: 'EPSG:4326',
+            		zoom: parseFloat(session_data['zoom_level']),
+            		minZoom: 2,
+            		maxZoom: 13
+        	}),
+        	layers: [
+            	new ol.layer.Tile({
+                	source: new ol.source.OSM()
+            		})
+        	]
+    	});
+
+	// Gérer les événements
+    	map.on('singleclick', function (evt) {
+        	// Close info_window équivalent à Google Maps
+		//info_window.setPosition(evt.coordinate);
+		info_window.setPosition(undefined);
+	        var coordinate = evt.coordinate; // Coordonnées du clic
+    		var pixel = evt.pixel; // Position en pixels du clic sur l'écran
+    		var features = map.getFeaturesAtPixel(pixel); // Obtenez les entités (features) à ce pixel
+
+    		var pointFeatures = []; // Tableau pour stocker les features de type ol.geom.Point
+    		var lineFeatures = []; // Tableau pour stocker les features de type ol.geom.LineString
+
+		var lineF;
+    
+    		for (var i = 0; i < features.length; i++) {
+        		var feature = features[i];
+        		var geometry = feature.getGeometry();
         
-        var map_center = new google.maps.LatLng(
-                parseFloat(session_data['map_center'].substring(0, session_data['map_center'].indexOf(","))),
-                parseFloat(session_data['map_center'].substring(session_data['map_center'].indexOf(",") + 1)));
-        
-        if (isNaN(map_center.lat()) || isNaN(map_center.lng())) {
-            show_error(996);
-        }
-            
-        map = new google.maps.Map(document.getElementById("map_canvas"), {
-            zoom: parseFloat(session_data['zoom_level']),
-            minZoom: 2,
-            maxZoom: 13,
-            center: map_center,
-            mapTypeId: google.maps.MapTypeId.ROADMAP,
-            mapTypeControl: false
-        });
-        google.maps.event.addListener(map, "click", function () {
-            info_window.close();
-        });
-        google.maps.event.addListenerOnce(map, "bounds_changed", function () {
+        		if (geometry instanceof ol.geom.Point) {
+				currentFeature=feature;
+            			pointFeatures.push(feature);
+				popupElement.innerHTML=feature.get("description");
+				info_window.setPosition(coordinate);
+        		}
+			if (geometry instanceof ol.geom.LineString) {
+				lineF=feature;
+				lineFeatures.push(feature);
+			}
+    		}
+    
+    		if (pointFeatures.length > 0) {
+        		// Des éléments de type ol.geom.Point ont été cliqués
+        		// Vous pouvez maintenant interagir avec ces éléments (par exemple, afficher des informations)
+                        popupElement.innerHTML=currentFeature.get("description");
+                        info_window.setPosition(coordinate);
+		} else if (lineFeatures.length > 0) {
+			 var normalWidth=popupElement.style.width;
+                         popupElement.innerHTML=lineF.get("description");
+                         //var contentWidth= popupElement.style.width;
+                         info_window.setPosition(coordinate);
+    		} else {
+        		// Aucun élément de type ol.geom.Point n'a été cliqué
+    		}
+    	});
+
+
+	map.once('postrender', function() {
+    		var extent = map.getView().calculateExtent(map.getSize());
+
+    		var northEast = ol.proj.toLonLat(ol.extent.getTopRight(extent));
+    		var southWest = ol.proj.toLonLat(ol.extent.getBottomLeft(extent));
+
+    		if (northEast[1] > 85.0 || southWest[1] < -85.0) {
+        		var map_center_wo_gray = hide_gray_map_area();  // Fonction fictive, remplacez par votre logique
+        		var map_center_wo_gray_lonlat = ol.proj.toLonLat(map_center_wo_gray);
+
+        		// Déclencher un événement pour indiquer le changement de données de session
+        		$(document).trigger('session_data_changed', {
+            		'map_center_wo_gray': map_center_wo_gray_lonlat[1] + "," + map_center_wo_gray_lonlat[0]
+        		});
+    		}
+	});
+
+	map.on('moveend', function() {
+    		var map_center = map.getView().getCenter();
+    		var map_center_lonlat = ol.proj.toLonLat(map_center);
+
+    		// Déclencher un événement pour indiquer le changement de données de session
+    		$(document).trigger('session_data_changed', {
+        		'map_center': map_center_lonlat[1] + "," + map_center_lonlat[0]
+    		});
+	});
+
+	map.getView().on('change:resolution', function() {
+    		// Récupérer le niveau de zoom actuel
+
+    		var zoomLevel = map.getView().getZoom();
+
+    		 // Déclencher un événement pour indiquer le changement de données de session
+    		$(document).trigger('session_data_changed', {
+        		'zoom_level': zoomLevel
+    		});
+
+    		var old_sm_zoom_level = get_SM_zoom_level(session_data['zoom_level']);
+    		var new_sm_zoom_level = get_SM_zoom_level(zoomLevel);
+
+		console.log('change resolution '+old_sm_zoom_level+'  new '+new_sm_zoom_level);
+
+    		if (old_sm_zoom_level !== new_sm_zoom_level) {
+			info_window.setPosition(undefined);
+        		remove_map_overlays();
+			//console.log('old_sm '+old_sm_zoom_level+'  '+new_sm_zoom_level);
+        		add_map_overlays(new_sm_zoom_level);
+        		init_legend();
+
+        		// Sélectionner le bouton radio appartenant au niveau de zoom actuel
+        		$('#zoom_level_' + zoom_levels[new_sm_zoom_level]).prop('checked', true);
+    		}
+
+    		map.once('postrender', function() {
+        		var map_center = map.getView().getCenter();
+        		var map_center_lonlat = ol.proj.toLonLat(map_center);
+
+        		// Vérifier si la zone grise est visible
+        		if (map_center_lonlat[1] > 85.0 || map_center_lonlat[1] < -85.0) {
+            			var map_center_wo_gray = hide_gray_map_area();  // Fonction fictive, remplacez par votre logique
+            			var map_center_wo_gray_lonlat = ol.proj.toLonLat(map_center_wo_gray);
+
+            			// Déclencher un événement pour indiquer le changement de données de session
+            			$(document).trigger('session_data_changed', {
+                			'map_center_wo_gray': map_center_wo_gray_lonlat[1] + "," + map_center_wo_gray_lonlat[0]
+            			});
+        		} else if (map_center !== undefined && session_data['map_center_wo_gray'] !== undefined) {
+            			var map_center_wo_gray_lonlat = ol.proj.toLonLat(session_data['map_center_wo_gray'].split(','));
+
             /*
-             * To make sure that bounds are set after the map has been loaded.
-             * If a gray area is present at the top or bottom of the map, change its center.
-             * Note that this command is called only once (because of addListenerOnce)
+             * Si le centre de la carte a été ajusté en raison d'une zone grise en haut ou en bas de la carte,
+             * rétablir le centre de la carte à son centre configuré réel.
+             * Lorsqu'appelée en mode de démonstration, lorsque une ligne aléatoire est cliquée par SURFmap, map.getCenter() peut être indéfini.
              */
-            if (map.getBounds().getNorthEast().lat() > 85.0 || map.getBounds().getSouthWest().lat() < -85.0) {
-                var map_center_wo_gray = hide_gray_map_area();
-                $(document).trigger('session_data_changed', {
-                    'map_center_wo_gray': map_center_wo_gray.lat() + "," + map_center_wo_gray.lng()
-                });
-            }
-        });
-        google.maps.event.addListener(map, 'dragend', function () {
-            $(document).trigger('session_data_changed', { 'map_center': map.getCenter().lat() + "," + map.getCenter().lng() } );
-        });
-        google.maps.event.addListener(map, 'zoom_changed', function () {
-            $(document).trigger('session_data_changed', { 'zoom_level': map.getZoom() } );
-            
-            var old_sm_zoom_level = get_SM_zoom_level(session_data['zoom_level']);
-            var new_sm_zoom_level = get_SM_zoom_level(map.getZoom());
-            
-            if (old_sm_zoom_level != new_sm_zoom_level) {
-                info_window.close();
-                remove_map_overlays();
-                add_map_overlays(new_sm_zoom_level);
-                init_legend();
-                
-                // Select radio button belonging to the current zoom level
-                $('#zoom_level_' + zoom_levels[new_sm_zoom_level]).prop('checked', true);
-            }
-            
-            google.maps.event.addListenerOnce(map, 'idle', function() {
-                var map_center = new google.maps.LatLng(
-                        parseFloat(session_data['map_center'].substring(0, session_data['map_center'].indexOf(","))),
-                        parseFloat(session_data['map_center'].substring(session_data['map_center'].indexOf(",") + 1)));
-                
-                // If gray map area is visible
-                if (map.getBounds().getNorthEast().lat() > 85.0 || map.getBounds().getSouthWest().lat() < -85.0) { 
-                    var map_center_wo_gray = hide_gray_map_area();
-                    $(document).trigger('session_data_changed', {
-                        'map_center_wo_gray': map_center_wo_gray.lat() + "," + map_center_wo_gray.lng()
-                    });
-                } else if (map.getCenter() != undefined && session_data['map_center_wo_gray'] != undefined) {
-                    var map_center_wo_gray = new google.maps.LatLng(
-                            parseFloat(session_data['map_center_wo_gray'].substring(0, session_data['map_center_wo_gray'].indexOf(","))),
-                            parseFloat(session_data['map_center_wo_gray'].substring(session_data['map_center_wo_gray'].indexOf(",") + 1)));
-                    
-                    /*
-                     * If the map center was adjusted due to a gray area at the top or bottom of the map, 
-                     * change its center again to the actual configured map center.
-                     * When called in demo mode, when a random line is clicked by SURFmap, map.getCenter() can be undefined.
-                     */
-                    if (map.getCenter().equals(map_center_wo_gray)) {
-                        map.setCenter(map_center);
-                    }
-                }
-            });
-        });
+            			if (map_center[0] === map_center_wo_gray_lonlat[0] && map_center[1] === map_center_wo_gray_lonlat[1]) {
+                			map.getView().setCenter(map_center);
+            			}
+        		}
+    		});
+	});
+
+	/* Test ajour marker a la main
+	*/
+ 	map.addOverlay(info_window);
+	//map.addLayer(markersLayer); // on ajoute la couche des markers
+
     }
     
     /*
@@ -549,111 +526,127 @@
      * Parameters:
      *       sm_zoom_level - New/current SURFmap zoom level.
      */  
-    function add_map_overlays (sm_zoom_level) {
-        // Lines
-        for (var i = 0; i < lines.length; i++) {
-            if (lines[i].level == sm_zoom_level) {
-                lines[i].obj.setMap(map);
-            }
-        }
-        
-        // Markers
-        for (var j = 0; j < markers.length; j++) {
-            if (markers[j].level == sm_zoom_level) {
-                markers[j].obj.setMap(map);
-            }
-        }
-    }
+	function add_map_overlays(sm_zoom_level) {
+    		// Lines
+    		for (var i = 0; i < lines.length; i++) {
+        		if (lines[i].level == sm_zoom_level && !map.getLayers().getArray().includes(lines[i].obj)) {
+            			// Ajoute la couche (objet) à la carte si elle n'est pas déjà présente
+				if (lines[i] && lines[i].obj !== null && lines[i].obj !== undefined) {
+    					map.addLayer(lines[i].obj);
+					//line_item.obj.setVisible(true);
+				} else {
+					window.alert("lineLayer have empty object "+i+"  "+JSON.stringify(lines[i].obj));
+				}
+        		}
+    		}
+    		// Markers
+    		for (var j = 0; j < markers.length; j++) {
+        		if (markers[j].level == sm_zoom_level && !map.getLayers().getArray().includes(markers[j].obj)) {
+            			// Ajoute la couche (objet) à la carte si elle n'est pas déjà présente
+            			map.addLayer(markers[j].obj); 
+				//marker_item.obj.setVisible(true);
+        		}
+    		}
+	}
+
     
     /*
      * Removes existing map overlays.
      * Parameters:
      *      sm_zoom_level - SURFmap zoom level at which overlays should be removed. If undefined, all overlays are removed.
      */
-    function remove_map_overlays (sm_zoom_level) {
-        if (lines != undefined) {
-            $.each(lines, function (line_index, line_item) {
-                if (sm_zoom_level == undefined || sm_zoom_level == line_item.level) {
-                    line_item.obj.setMap(null);
-                }
-            });
-        }
-        
-        if (markers != undefined) {
-            $.each(markers, function (marker_index, marker_item) {
-                if (sm_zoom_level == undefined || sm_zoom_level == marker_item.level) {
-                    marker_item.obj.setMap(null);
-                }
-            });
-        }
-    }
+    function remove_map_overlays(sm_zoom_level) {
+    	if (lines !== undefined) {
+        	lines.forEach(function (line_item) {
+            	if (sm_zoom_level === undefined || sm_zoom_level === line_item.level) {
+                	// map.removeLayer(line_item.obj);
+			if (line_item.obj !== undefined) {
+                		map.removeLayer(line_item.obj);
+			}
+            	}
+        	});
+    	}
+
+    	if (markers !== undefined) {
+        	markers.forEach(function (marker_item) {
+            	if (sm_zoom_level === undefined || sm_zoom_level === marker_item.level) {
+                	map.removeLayer(marker_item.obj);
+            	}
+        	});
+    	}
+     }
+
     
     /*
      * Fires a 'click' event on a randomly selected line at the current zoom level.
      */     
-    function click_random_line () {
-        var zoom_level = get_SM_zoom_level(map.getZoom());
-        var lines_at_level = [];
-        
-        // Collect all line objects at the current zoom level
-        if (lines != undefined) {
-            $.each(lines, function (line_index, line) {
-                if (line.level == zoom_level) {
-                    lines_at_level.push(line);
-                }
-            });
-        
-            // Randomly select one line out of the collected lines
-            var selected_line = lines_at_level[Math.floor(Math.random() * lines_at_level.length)];
-        
-            var map_center = new google.maps.LatLng(
-                    parseFloat(session_data['map_center'].substring(0, session_data['map_center'].indexOf(","))),
-                    parseFloat(session_data['map_center'].substring(session_data['map_center'].indexOf(",") + 1)));
-        
-            // Measures for distance to map center
-            var distance_point1 = Math.abs(selected_line.point1.lat() - map_center.lat()) + Math.abs(selected_line.point1.lng() - map_center.lng());
-            var distance_point2 = Math.abs(selected_line.point2.lat() - map_center.lat()) + Math.abs(selected_line.point2.lng() - map_center.lng());
-        
-            // Calculate which line end point is closest to map center
-            if (distance_point1 < distance_point2) {
-                google.maps.event.trigger(selected_line.obj, 'click', 
-                        new google.maps.LatLng(selected_line.point2.lat(), selected_line.point2.lng())); 
-            } else {
-                google.maps.event.trigger(selected_line.obj, 'click', 
-                        new google.maps.LatLng(selected_line.point1.lat(), selected_line.point1.lng())); 
+   function click_random_line() {
+    var zoom_level = get_SM_zoom_level(map.getView().getZoom());
+    var lines_at_level = [];
+
+    // Collecter tous les objets de ligne au niveau de zoom actuel
+    if (lines !== undefined) {
+        lines.forEach(function(line) {
+            if (line.level === zoom_level) {
+                lines_at_level.push(line);
             }
-        }
-    }    
-    
+        });
+        // Sélectionner aléatoirement une ligne parmi les lignes collectées
+        var selected_line = lines_at_level[Math.floor(Math.random() * lines_at_level.length)];
+        var map_center = map.getView().getCenter();
+        
+        // Mesurer la distance par rapport au centre de la carte
+        var distance_point1 = Math.abs(selected_line.point1[0] - map_center[0]) + Math.abs(selected_line.point1[1] - map_center[1]);
+        var distance_point2 = Math.abs(selected_line.point2[0] - map_center[0]) + Math.abs(selected_line.point2[1] - map_center[1]);
+        
+        // Calculer quel extrémité de ligne est la plus proche du centre de la carte
+        if (distance_point1 < distance_point2) {
+			var clickEvent = new Event('click');
+			clickEvent.coordinate = selected_line.point2;
+			selected_line.obj.dispatchEvent(clickEvent);
+		} else {
+			var clickEvent = new Event('click');
+			clickEvent.coordinate = selected_line.point1;
+			selected_line.obj.dispatchEvent(clickEvent);
+		}
+
+    }
+} 
    /*
     * This function zooms the SURFmap map to a defined zoom level.
     * Parameters:
     *     direction - can be either 0 (in) or 1 (out)
     *     level - the destination zoom level (optional)
     */          
-    function zoom (direction, level) {
-        if (level == undefined) {
-            if (direction == 0) {
-                map.setZoom(map.getZoom() + 1);
-            } else {
-                map.setZoom(map.getZoom() - 1);
-            }
-        } else {
-            map.setZoom(level);
-        }
-    }
-    
+   	function zoom(direction, level) {
+    		var currentZoom = map.getView().getZoom();
+
+    		if (level === undefined) {
+        		if (direction === 0) {
+            			map.getView().setZoom(currentZoom + 1);
+        		} else {
+            			map.getView().setZoom(currentZoom - 1);
+        		}
+    		} else {
+        		map.getView().setZoom(level);
+    		}
+		
+	//zoom_level=get_GM_zoom_level(map.getView().getZoom);
+	//return zoom_level;
+	}
+ 
     /*
      * This function quick zooms the SURFmap map to the next (SURFmap) zoom level.
      * Parameters:
      *     direction - can be either 0 (in) or 1 (out)
      */ 
     function quick_zoom (direction) {
-        var current_level = get_SM_zoom_level(map.getZoom());
-        if (direction == 0 && current_level < 3) {
-            map.setZoom(5 + (current_level * 3));
-        } else if (direction == 1 && current_level > 0) {
-            map.setZoom(2 + ((current_level - 1) * 3));
+        var current_level = get_SM_zoom_level(map.getView().getZoom());
+	var cur = map.getView().getZoom();
+        if (direction == 0) {
+            map.getView().setZoom(10);
+        } else if (direction == 1) {
+            map.getView().setZoom(0);
         }
     }
     
@@ -661,16 +654,50 @@
      * Hides a gray map area by changing the map's center and return the map center after algorithm
      * completion (i.e. map center without visible gray areas).
      */
-    function hide_gray_map_area () {
-        if (map.getBounds().getNorthEast().lat() > 85.0) {
-            while (map.getBounds().getNorthEast().lat() > 85.0) {
-                map.setCenter(new google.maps.LatLng(map.getCenter().lat() - 0.5, map.getCenter().lng()));
-            }
-        } else if (map.getBounds().getSouthWest().lat() < -85.0) {
-            while (map.getBounds().getNorthEast().lat() > 85.0) {
-                map.setCenter(new google.maps.LatLng(map.getCenter().lat() + 0.5, map.getCenter().lng()));
-            }
-        }
-        
-        return map.getCenter();
-    }
+	function hide_gray_map_area() {
+    		var maxLat = ol.proj.toLonLat(map.getView().getProjection().getExtent())[1];
+    		var minLat = ol.proj.toLonLat(map.getView().getProjection().getExtent())[3];
+
+    		if (map.getView().calculateExtent(map.getSize())[1] > maxLat) {
+        		while (map.getView().calculateExtent(map.getSize())[1] > maxLat) {
+            		map.getView().setCenter([map.getView().getCenter()[0] - 0.5, map.getView().getCenter()[1]]);
+        		}
+    		} else if (map.getView().calculateExtent(map.getSize())[3] < minLat) {
+        		while (map.getView().calculateExtent(map.getSize())[3] < minLat) {
+            		map.getView().setCenter([map.getView().getCenter()[0] + 0.5, map.getView().getCenter()[1]]);
+        		}
+    		}
+    		return map.getView().getCenter();
+	}
+     /*
+      * for testing only
+      */
+	function addPoint() {
+		var greenIcon = new ol.style.Style({
+                        image: new ol.style.Icon({
+                                src: 'img/markers/green-dot.png',
+                        }),
+                });
+		var defaultStyle =  new ol.style.Style({
+                        image: new ol.style.Icon({
+                                src: 'img/markers/blue-dot.png',
+                        })
+                });
+
+
+	 
+        	var markerL = new ol.layer.Vector({
+                source: new ol.source.Vector({
+                features: [
+                        new ol.Feature({
+                                geometry: new ol.geom.Point([ 166.079794, -20.528807]),
+                        })
+                ]
+                }),
+                style : greenIcon,
+        	});
+
+        //map.addLayer(markerL);
+
+
+}
