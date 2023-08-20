@@ -1,4 +1,4 @@
-SURFmap -- A Network Monitoring Tool Based on the Google Maps API
+SURFmap -- A Network Monitoring Tool Based on the OpenLayer API (old with Google Maps API)
 
 Version:    3.3.1
 Author:     Rick Hofstede, University of Twente <r.j.hofstede@utwente.nl>
