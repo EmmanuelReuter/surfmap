@@ -38,8 +38,8 @@ check 2.5; for installation verification, check 2.6):
 
 2.2) Automated tar ball installation (latest stable, recommended)
 
-- Download installation script:
-    $ wget http://sourceforge.net/projects/surfmap/files/install.sh
+- Download Code :
+    $ wget https://github.com/EmmanuelReuter/surfmap/archive/refs/heads/master.zip
     $ chmod +x install.sh
 
 - Install plugin:
@@ -49,14 +49,15 @@ check 2.5; for installation verification, check 2.6):
 2.3) Manual tar ball installation (latest stable)
 
 - Download tar ball from SourceForge repository:
-    $ wget http://downloads.sourceforge.net/project/surfmap/source/SURFmap_v3.3.1.tar.gz
+    $ wget https://github.com/EmmanuelReuter/surfmap/archive/refs/heads/master.zip
 
-- Download MaxMind GeoLite2 City and Countries database:
+- Download MaxMind GeoLite2 City and Countries database: Datafiles are allready included to the archive. For new ones, please download it.
     https://dev.maxmind.com/geoip/geolite2-free-geolocation-data
     
 
 - Unpack installation package:
-    $ tar zxf SURFmap_v3.3.1.tar.gz --directory=.
+    $ gzip -d surmap-master.zip.
+- create SURFmap directory under nfsen/plugin
     
 - Install plugin files:
     $ cp -r SURFmap/frontend/* /var/www/nfsen/plugins/
@@ -89,13 +90,8 @@ You can choose another Collector, for as i do,
 - Start plugin:
     $ sudo /etc/init.d/nfsen reload
 
-#2.4) SVN trunk installation (latest development version)
-Not sure, not my knowledge..
-#    $ wget http://svn.code.sf.net/p/surfmap/code/trunk/setup/scripts/install-svn-trunk.sh
-#    $ chmod +x install-svn-trunk.sh
-#    $ ./install-svn-trunk.sh
 
-2.5) Upgrading existing installation
+2.4) Upgrading existing installation
 
 When upgrading your SURFmap installation to a newer version, keep in mind that the 
 configuration file (config.php) is not always compatible between the versions. It's 
