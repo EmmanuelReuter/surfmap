@@ -24,9 +24,9 @@
     <link type="text/css" rel="stylesheet" href="lib/jquery/css/start/jquery-ui-1.10.4.custom.min.css" />
     <link type="text/css" rel="stylesheet" href="css/surfmap.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/openlayers/6.5.0/ol.css" type="text/css">
-    <script src="/v6.15.1/build/ol.js"></script>
+    <script src="/OpenLayers/build/ol.js"></script>
 	<!-- ol-ext -->
-    <script type="text/javascript" src="/v6.15.1/ol-ext.js"></script>
+    <script type="text/javascript" src="/OpenLayers/ol-ext.js"></script>
 
     <script type="text/javascript" src="lib/jquery/js/jquery-1.9.1.min.js"></script>
     <!-- <script type="text/javascript" src="lib/jquery/js/jquery-3.7.0.min.js"></script>  -->
@@ -75,10 +75,11 @@
         var error_dialog_queue = [];
         var warning_dialog_queue = [];
         
-        // Google Maps-related elements
+        // OpenLayer Maps-related elements
         var lines;
         var markers;
         var map;
+	var mapUpdateElement; // Map update date
 
  	// test
 	var popupElement = document.createElement('div');
@@ -173,7 +174,7 @@
 <body>
     <div id="header">
         <span id="logo">
-<a href="http://www.utwente.nl/en" target="_blank"><img src="img/UT_Logo.png" alt="University of Twente"/></a><br /><BR /> 
+<a href="http://www.utwente.nl/en" target="_blank"><img src="img/UT_Logo.png" alt="University of Twente"/></a> 
        <a href="http://www.ird.fr/" target="_blank"><img src="img/logo-ird-small.png" alt="Institut de Recherche et de Developpement"/></a> 
 	 </span>
         <div id="header_line">&nbsp;</div>
@@ -198,9 +199,10 @@
         </div>
 	<H3>&nbsp; </H3>
         <div class="footer" id="footerfunctions" style='float:right;'>
+		<div id="mapUpdate"></div>
             <a href="Javascript:show_flow_details();" title="Show flow details">Flow details</a> | 
             <a href="Javascript:show_info('help');" title="Show help information">Help</a> | 
-            <a href="Javascript:show_info('about');" title="Show about information">About</a>
+            <a href="Javascript:show_info('about');" title="Show about information">About</a><br />
         </div>
     </div>
     
