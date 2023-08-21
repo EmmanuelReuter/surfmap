@@ -235,6 +235,7 @@ $(document).ready(function() {
                     $.each(data.session_data, function(key, value) {
                         session_data[key] = value;
                     });
+			showDate();
                 } else {
                     show_error(807, data.status_message);
 

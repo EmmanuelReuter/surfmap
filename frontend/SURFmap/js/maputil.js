@@ -518,6 +518,7 @@
 	*/
  	map.addOverlay(info_window);
 	//map.addLayer(markersLayer); // on ajoute la couche des markers
+	showDate(); // date Update
 
     }
     

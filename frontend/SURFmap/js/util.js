@@ -199,3 +199,19 @@
         
         return active;
     }
+
+    /*
+     * Just to show the update time of the map
+     *
+     */
+    function showDate() {
+	mapUpdateElement = document.getElementById("mapUpdate");
+	var currentDate = new Date();
+
+        // Formatez la date en chaîne de caractères (par exemple : "YYYY-MM-DD HH:MM:SS")
+        var formattedDate = currentDate.toISOString().slice(0, 19).replace("T", " ");
+
+        // Mettez à jour le contenu de l'élément avec la date de mise à jour
+       mapUpdateElement.textContent = "Created : " + formattedDate;
+   }
+
